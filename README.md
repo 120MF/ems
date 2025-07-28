@@ -1,6 +1,8 @@
 # EMS (Embedded Music Script) Parser
 
-A lightweight music notation format designed for embedded systems and mono-sound instruments.
+English Version | [中文版本](README_zh.md)
+
+A lightweight music notation format designed for embedded systems and monophonic instruments.
 
 ## Features
 
@@ -12,7 +14,7 @@ A lightweight music notation format designed for embedded systems and mono-sound
 
 ## Format
 
-- See doc
+- See [Format](doc/pages/format.md)
 
 ## Example
 ```c
@@ -28,4 +30,4 @@ play_music_string("(120){4}1,2,3,4,5,6,7,1^");
 
 ## Credit
 
-- The inspiration of EMS is from [simai](https://w.atwiki.jp/simai/pages/1003.html) created by `Celeca`. 
+- The inspiration of EMS is from [simai](https://w.atwiki.jp/simai/pages/1003.html) created by `Celeca`.
