@@ -7,8 +7,12 @@ set(CMAKE_CXX_STANDARD 20)
 
 option(EMS_BUILD_EXAMPLES "Build EMS examples" OFF)
 
-add_library(ems INTERFACE)
-target_include_directories(ems INTERFACE include)
+if (ZEPHYR_TOOLCHAIN_VARIANT)
+    zephyr_include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+else ()
+    add_library(ems INTERFACE)
+    target_include_directories(ems INTERFACE include)
+endif ()
 
 if (EMS_BUILD_EXAMPLES)
     include(FetchContent)
