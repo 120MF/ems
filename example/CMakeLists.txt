@@ -1,1 +1,2 @@
 add_subdirectory(basic)
+target_include_directories(ems_example_basic PUBLIC audio)

@@ -50,7 +50,7 @@ namespace ems
     namespace internal
     {
         // Compile-time power function approximation for float
-        constexpr float power(const float base, const int exp)
+        consteval float power(const float base, const int exp)
         {
             if (exp == 0) return 1.0f;
             if (exp < 0) return 1.0f / power(base, -exp);
@@ -59,27 +59,28 @@ namespace ems
             return res;
         }
 
-        // Calculate frequency ratio relative to Middle C (Do)
-        // 1=Do (0 semitones), 1`=High Do (12 semitones)
-        constexpr float calculate_ratio(const int note_num, const int octave_offset, const int semitone_offset)
+        // 基于 A4=440Hz 的频率比（倍频）计算：返回 freq / 440.0f
+        consteval float calculate_ratio(const int note_num,
+                                        const int octave_offset,
+                                        const int semitone_offset)
         {
             if (note_num == 0) return 0.0f; // Rest
 
-            // Mapping scale degree (1-7) to semitone offset from C
             // 1(C)=0, 2(D)=2, 3(E)=4, 4(F)=5, 5(G)=7, 6(A)=9, 7(B)=11
             constexpr int scale_semitones[] = {0, 0, 2, 4, 5, 7, 9, 11};
 
-            const int total_semitones = scale_semitones[note_num]
-                + (octave_offset * 12)
-                + semitone_offset;
+            const int semitones_from_C4 =
+                scale_semitones[note_num] + octave_offset * 12 + semitone_offset;
 
-            // 12th root of 2 ~= 1.059463094
-            constexpr float SEMITONE_STEP = 1.059463094f;
-            return power(SEMITONE_STEP, total_semitones);
+            // A4 to C4: +9
+            const int semitones_from_A4 = semitones_from_C4 - 9;
+
+            constexpr float SEMITONE_STEP = 1.059463094f; // 2^(1/12)
+            return power(SEMITONE_STEP, semitones_from_A4);
         }
 
         // Helper to parse integer from string_view
-        constexpr int parse_int(const std::string_view sv, size_t& idx)
+        consteval int parse_int(const std::string_view sv, size_t& idx)
         {
             int val = 0;
             while (idx < sv.size() && sv[idx] >= '0' && sv[idx] <= '9')
@@ -99,7 +100,7 @@ namespace ems
         class Parser
         {
         public:
-            static consteval size_t count_notes(std::string_view score)
+            static consteval size_t count_notes(const std::string_view score)
             {
                 size_t count = 0;
                 size_t i = 0;
@@ -113,48 +114,21 @@ namespace ems
                         i++;
                         continue;
                     }
-                    if (score[i] == '{')
-                    {
-                        while (i < score.size() && score[i] != '}') i++;
-                        i++;
-                        continue;
-                    }
                     break;
                 }
 
                 // Scan Body
                 while (i < score.size())
                 {
-                    const char c = score[i];
-                    if (c == ',' || c == ' ' || c == '\n' || c == '\r')
-                    {
-                        i++;
-                        continue;
-                    }
-
                     // Detect Note Start: 0-7 or prefix `
-                    if ((c >= '0' && c <= '7') || c == '`')
+                    if (const char c = score[i]; c >= '0' && c <= '7')
                     {
                         count++;
-
-                        // Consume prefix `
-                        if (score[i] == '`') i++;
-                        // Consume digit
-                        if (i < score.size() && score[i] >= '0' && score[i] <= '7') i++;
-
-                        // Consume modifiers
-                        while (i < score.size())
-                        {
-                            const char n = score[i];
-                            const bool is_mod = (n == 's' || n == 'b' || n == ',' ||
-                                n == '-' || n == '.' || n == '_' || n == '`');
-                            if (!is_mod) break;
-                            i++;
-                        }
+                        i++;
                     }
                     else
                     {
-                        i++; // Skip unknown chars
+                        i++;
                     }
                 }
                 return count;
@@ -167,22 +141,14 @@ namespace ems
                 size_t note_idx = 0;
                 size_t i = 0;
 
-
-                int bpm = 120;
-                int beat_base = 4; // Default to quarter note
+                float bpm = 120.0f;
 
                 // --- 1. Header Parsing ---
                 if (i < score.size() && score[i] == '(')
                 {
                     i++;
-                    bpm = parse_int(score, i);
+                    bpm = static_cast<float>(parse_int(score, i));
                     if (i < score.size() && score[i] == ')') i++;
-                }
-                if (i < score.size() && score[i] == '{')
-                {
-                    i++;
-                    beat_base = parse_int(score, i);
-                    if (i < score.size() && score[i] == '}') i++;
                 }
 
                 const float ms_per_beat = 60000.0f / bpm;
@@ -190,71 +156,75 @@ namespace ems
                 // --- 2. Body Parsing ---
                 while (i < score.size() && note_idx < N)
                 {
-                    char c = score[i];
-                    if (c == ',' || c == ' ' || c == '\n' || c == '\r')
-                    {
-                        i++;
-                        continue;
-                    }
-
-                    if ((c >= '0' && c <= '7') || c == '`')
+                    if (const char c = score[i]; (c >= '0' && c <= '7') || c == '`')
                     {
                         int num = 0;
                         int oct = 0;
                         int semi = 0;
-                        float dur_mult = 1.0f; // Default 1 beat
+                        float dur_mult = 0.0f;
 
-                        // Prefix Octave (Lower)
+                        // 1. Prefix Octave (Lower)
                         if (score[i] == '`')
                         {
-                            oct--;
+                            oct--; // 降八度
                             i++;
                         }
 
-                        // Note Number
+                        // 2. Note Number
                         if (i < score.size() && score[i] >= '0' && score[i] <= '7')
                         {
                             num = score[i] - '0';
                             i++;
                         }
 
-                        // Suffix Modifiers
+                        // 3. Suffix Modifiers
+                        // 防止混淆 Duration 后面的 Pitch 修饰符
+                        bool parsing_duration = false;
                         bool loop = true;
+
                         while (i < score.size() && loop)
                         {
-                            switch (score[i])
+                            const char mod = score[i];
+                            switch (mod)
                             {
-                            case 's': semi++;
+                            // --- Pitch Modifiers ---
+                            case 's':
+                            case 'b':
+                            case '`':
+                                if (parsing_duration)
+                                {
+                                    // 如果已经进入时长模式，再次遇到音高修饰符（如 `），
+                                    // 说明这是下一个音符的前缀，立即停止当前解析。
+                                    loop = false;
+                                    continue; // 不消耗字符 i
+                                }
+                                if (mod == 's') semi++;
+                                else if (mod == 'b') semi--;
+                                else { oct++; } // `
                                 break;
-                            case 'b': semi--;
+
+                            // --- Duration Modifiers ---
+                            case ',': dur_mult += 1.0f;
+                                parsing_duration = true;
                                 break;
-                            case '`': oct++;
-                                break; // Suffix Octave (Higher)
-                            case ',': dur_mult = 1.0f;
-                                break; // 1 beat
-                            case '-': dur_mult = 0.5f;
-                                break; // 1/2 beat
-                            case '.': dur_mult = 0.25f;
-                                break; // 1/4 beat
-                            case '_': dur_mult = 2.0f;
-                                break; // 2 beats
-                            default: loop = false;
-                                continue; // Break switch, don't increment i
+                            case '-': dur_mult += 0.5f;
+                                parsing_duration = true;
+                                break;
+                            case '.': dur_mult += 0.25f;
+                                parsing_duration = true;
+                                break;
+                            case '_': dur_mult += 2.0f;
+                                parsing_duration = true;
+                                break;
+
+                            default:
+                                loop = false;
+                                continue; // 不消耗字符 i
                             }
-                            i++;
+                            i++; // 消耗有效的修饰符
                         }
 
-                        // Calculate Logic
                         notes[note_idx].ratio = calculate_ratio(num, oct, semi);
-
-                        // Duration: (ms_per_beat) * (modifier) * (scale to quarter note)
-                        // If base is {4}, scalar is 1. If base is {8}, scalar is 0.5?
-                        // Usually {4} means 1 beat = quarter note.
-                        // Correct logic based on EMS: {X} defines what "1 beat" is.
-                        // So "1," is always ms_per_beat. No extra scaling needed based on beat_base
-                        // unless we want to normalize strictly to quarter notes,
-                        // but usually BPM is "Beats Per Minute", where Beat is defined by {X}.
-
                         notes[note_idx].duration_ms = static_cast<uint32_t>(ms_per_beat * dur_mult);
                         note_idx++;
                     }

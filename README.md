@@ -6,7 +6,7 @@ A lightweight music notation format designed for embedded systems and monophonic
 
 ## Features
 
-- Simple string-based notation: `(120){4}1,2,3,4,5,6,7,1^`
+- Simple string-based notation: `(120)1,2,3,4,5,6,7,1^`
 - Minimal memory footprint
 - Easy parsing for microcontrollers
 - Human-readable format
@@ -17,8 +17,9 @@ A lightweight music notation format designed for embedded systems and monophonic
 - See [Format](doc/pages/format.md)
 
 ## Example
+
 ```c
-play_music_string("(120){4}1,2,3,4,5,6,7,1^");
+play_music_string("(120)1,2,3,4,5,6,7,1^");
 // BPM=120, quarter notes, C major scale
 ```
 

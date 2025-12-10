@@ -1,12 +1,29 @@
 #include "ems_parser.hpp"
+#include "Audio.hpp"
+
 #include <format>
 #include <iostream>
 using namespace ems::literals;
-constexpr auto melody = "(104){4}4s,4s,5,6,6,5,4s,3,2,2,3,4s,4s-,3-3,,4s,4s,5,6,6,5,4s,3,2,2,3,4s,3-,2-2,,3,3,4s,2,3,4s-5-4s,2,"_ems;
+constexpr auto melody =
+    R"((200)
+        2s`,,1s`,7,,1s`,2s`-,3`-2s`,1s`,,,
+        2s`,,1s`,7,,1s`,2s`-,3`-2s`,1s`,,,
+        2s`,,1s`,7,,1s`,2s`-,3`-2s`,1s`,,,
+        2s`,,1s`,7,,1s`,2s`-,3`-2s`,1s`,,7-1s`-
+        2s`,2s`,1s`,3`,2s`,1s`,1s`,1s`,7,3`,2s`,1s`,
+        1s`,,7-1s`-2s`,,,,,,7,4s`,7`,
+        6s`,,7`,6s`,,7`,6s`-5s`-4s`,,4s`,1s`,3`,
+        3`,2s`,2s`,2s`,,,3`,2s`,1s`,2s`,,4s`,
+        7,,,
+)"_ems;
+
 int main()
 {
-    for (const auto& note : melody) {
-        auto s = std::format("ratio: {}, duration: {} ", note.ratio, note.duration_ms);
+    // You can hear the melody playing
+    for (const auto& [ratio, duration_ms] : melody)
+    {
+        auto s = std::format("ratio: {}, duration: {} ", ratio, duration_ms);
         std::cout << s << "\n";
     }
+    playMelody(melody);
 }
