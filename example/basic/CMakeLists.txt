@@ -1,2 +1,2 @@
-add_executable(ems_example_basic src/main.c)
+add_executable(ems_example_basic src/main.cpp)
 target_link_libraries(ems_example_basic PRIVATE ems)

@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.31)
-project(ems C)
+project(ems CXX)
 
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
 
-add_library(ems STATIC src/ems_parser.c)
-target_include_directories(ems PUBLIC include)
+add_library(ems INTERFACE)
+target_include_directories(ems INTERFACE include)
 
 add_subdirectory(example)
